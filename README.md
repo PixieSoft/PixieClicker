@@ -2,11 +2,12 @@
 
 Autoclicker for Roblox and other games built with AutoIt v3.
 
+No installation required, just download and run PixieClicker.exe.
+
 _Your antivirus may complain because this affects mouse and window focus. It is safe to run. Source code is available here to review._
 
 **Features:**
 
-- No installation, just save it anywhere on your PC and run.
 - Record any screen position (supports multiple monitors).
 - Create as many timers as you want.
 - Set a custom label for each timer.
