@@ -5,9 +5,9 @@
 #AutoIt3Wrapper_UseX64=n
 #AutoIt3Wrapper_Res_Comment=PixieClicker - Automated Mouse Clicker for Roblox and other games.
 #AutoIt3Wrapper_Res_Description=PixieClicker - Automated Mouse Clicker for Roblox and other games.
-#AutoIt3Wrapper_Res_Fileversion=1.1.0.0
+#AutoIt3Wrapper_Res_Fileversion=1.2.0.0
 #AutoIt3Wrapper_Res_FileVersion_AutoIncrement=n
-#AutoIt3Wrapper_Res_ProductVersion=1.1.0.0
+#AutoIt3Wrapper_Res_ProductVersion=1.2.0.0
 #AutoIt3Wrapper_Res_CompanyName=PixieSoft
 #AutoIt3Wrapper_Res_LegalCopyright=Copyright © 2025
 #AutoIt3Wrapper_Run_AU3Check=y
@@ -16,7 +16,7 @@
 ; Change Log
 ; 04/02/25 - Initial release.
 ; 04/24/25 - Warning boxes no longer steal focus and have colored backgrounds.
-
+; 08/02/25 - Reduced all delays to 30ms. Red warning box stays active until clicking is done.
 
 
 ; =================
@@ -34,7 +34,7 @@
 ; Registry key constants
 ; Application information constants
 Global Const $APP_NAME = "PixieClicker"
-Global Const $APP_VERSION = "1.1.0"
+Global Const $APP_VERSION = "1.2.0"
 Global Const $REGISTRY_KEY = "HKEY_CURRENT_USER\Software\" & $APP_NAME
 
 ; Initialize variables
@@ -49,6 +49,11 @@ Global $iBaseHeight = 150 ; Base height for GUI with minimum timers
 Global $aTimerData[2][5] ; [timer_index][0=X, 1=Y, 2=Minutes, 3=Active, 4=Label]
 Global $aTimerMinutesValue[2] ; Direct tracking of minutes value
 Global $aTimerInterval[2] ; Store the actual interval in milliseconds
+
+; Include needed constants for scrolling
+Global Const $SB_BOTTOM = 7
+Global Const $SB_SCROLLCARET = 4
+Global Const $SB_TOP = 6 ; Added for scrolling to top
 
 ; Initialize with default values
 For $i = 0 To 1
@@ -632,8 +637,6 @@ Func ToggleTimer($iTimerIndex)
 EndFunc
 
 ; Function to perform a sequence of clicks at specified coordinates
-; Function to perform a sequence of clicks at specified coordinates
-; Function to perform a sequence of clicks at specified coordinates
 Func PerformClick($iX, $iY, $sLabel)
     ; Show countdown first
     Local $aScreenSize = _GetDesktopSize()
@@ -690,16 +693,11 @@ Func PerformClick($iX, $iY, $sLabel)
                     $bCancelled = True
                     ExitLoop 2 ; Exit both loops
             EndSwitch
-            Sleep(100)
+            Sleep(30)
         WEnd
         
         ; Hide this window before showing the next
         If $i < 2 Then DllCall("user32.dll", "int", "ShowWindow", "hwnd", $hCountdown[$i], "int", 0) ; SW_HIDE = 0
-    Next
-    
-    ; Close all countdown GUIs
-    For $i = 0 To 2
-        GUIDelete($hCountdown[$i])
     Next
     
     ; Check if cancelled
@@ -719,7 +717,7 @@ Func PerformClick($iX, $iY, $sLabel)
     AddStatusMessage("First click at X=" & $iX & ", Y=" & $iY, $sLabel)
     
     ; Wait 100ms (updated from 250ms)
-    Sleep(100)
+    Sleep(30)
     
     ; Second click at the same position
     MouseClick("left", $iX, $iY, 1, 0)
@@ -739,19 +737,24 @@ Func PerformClick($iX, $iY, $sLabel)
     
     ; Wait 300ms (updated from 1000ms)
     AddStatusMessage("Waiting 300ms before offset clicks...", $sLabel)
-    Sleep(300)
+    Sleep(30)
     
     ; CRITICAL FIX: Use $iNewX and $iNewY when actually clicking
     MouseClick("left", $iNewX, $iNewY, 1, 0)
     AddStatusMessage("First offset click at X=" & $iNewX & ", Y=" & $iNewY, $sLabel)
     
     ; Wait 100ms (updated from 250ms)
-    Sleep(100)
+    Sleep(30)
     
     ; CRITICAL FIX: Use $iNewX and $iNewY when actually clicking
     MouseClick("left", $iNewX, $iNewY, 1, 0)
     AddStatusMessage("Second offset click at X=" & $iNewX & ", Y=" & $iNewY, $sLabel)
-    
+
+    ; Close all countdown GUIs
+    For $i = 0 To 2
+        GUIDelete($hCountdown[$i])
+    Next
+
     ; Restore previous mouse position
     MouseMove($aPrevMousePos[0], $aPrevMousePos[1], 0)
     
@@ -823,11 +826,6 @@ Func AddStatusMessage($sMessage, $sTimerLabel = "")
     
     Return $sFormattedMessage
 EndFunc
-
-; Include needed constants for scrolling
-Global Const $SB_BOTTOM = 7
-Global Const $SB_SCROLLCARET = 4
-Global Const $SB_TOP = 6 ; Added for scrolling to top
 
 Func _IsPressed($sHexKey)
     Local $aReturn = DllCall("user32.dll", "int", "GetAsyncKeyState", "int", "0x" & $sHexKey)
