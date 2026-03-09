@@ -18,7 +18,7 @@
 ; 04/24/25 - Warning boxes no longer steal focus and have colored backgrounds.
 ; 08/02/25 - Reduced all delays to 30ms. Red warning box stays active until clicking is done.
 ; 03/08/26 - Added a 2-second wait until no mouse or keyboard activity is detected before clicking.
-
+;            Resized countdown window to fit longer timer names without wrapping.
 
 ; =================
 ; PixieClicker.au3
@@ -678,7 +678,7 @@ Func PerformClick($iX, $iY, $sLabel)
     Local $iScreenHeight = $aScreenSize[1]
     
     ; Create a much smaller GUI for the countdown
-    Local $iCountdownWidth = 250
+    Local $iCountdownWidth = 240
     Local $iCountdownHeight = 80
     
     ; Position in bottom right with 20px margin from edges
@@ -701,15 +701,16 @@ Func PerformClick($iX, $iY, $sLabel)
         ; Set color-specific background
         GUISetBkColor($aColors[$i], $hCountdown[$i])
         
-        ; Create larger label for timer name (increased font size from 9 to 12)
-        $idInfoLabel[$i] = GUICtrlCreateLabel($sLabel, 10, 10, 120, 25)
-        GUICtrlSetFont($idInfoLabel[$i], 12, 700) ; Larger font and bold
-        
-        ; Move number closer to right edge (changed X from 90 to 140)
-        $idCountLabel[$i] = GUICtrlCreateLabel(3 - $i, 140, 8, 30, 25)
+        ; Add the timer name label to the window
+        $idInfoLabel[$i] = GUICtrlCreateLabel($sLabel, 10, 10, 210, 25)
+        GUICtrlSetFont($idInfoLabel[$i], 12, 700)
+
+        ; Add the countdown number to the right side of the window
+        $idCountLabel[$i] = GUICtrlCreateLabel(3 - $i, 210, 8, 20, 25, $SS_RIGHT)
         GUICtrlSetFont($idCountLabel[$i], 16, 700)
-        
-        $idCancelButton[$i] = GUICtrlCreateButton("Cancel", 50, 40, 80, 25)
+
+        ; Create the Cancel button
+        $idCancelButton[$i] = GUICtrlCreateButton("Cancel", 85, 40, 80, 25)
     Next
     
     ; Do the countdown - showing one window at a time
