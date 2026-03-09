@@ -5,9 +5,9 @@
 #AutoIt3Wrapper_UseX64=n
 #AutoIt3Wrapper_Res_Comment=PixieClicker - Automated Mouse Clicker for Roblox and other games.
 #AutoIt3Wrapper_Res_Description=PixieClicker - Automated Mouse Clicker for Roblox and other games.
-#AutoIt3Wrapper_Res_Fileversion=1.2.0.0
+#AutoIt3Wrapper_Res_Fileversion=1.3.0.0
 #AutoIt3Wrapper_Res_FileVersion_AutoIncrement=n
-#AutoIt3Wrapper_Res_ProductVersion=1.2.0.0
+#AutoIt3Wrapper_Res_ProductVersion=1.3.0.0
 #AutoIt3Wrapper_Res_CompanyName=PixieSoft
 #AutoIt3Wrapper_Res_LegalCopyright=Copyright © 2025
 #AutoIt3Wrapper_Run_AU3Check=y
@@ -17,6 +17,7 @@
 ; 04/02/25 - Initial release.
 ; 04/24/25 - Warning boxes no longer steal focus and have colored backgrounds.
 ; 08/02/25 - Reduced all delays to 30ms. Red warning box stays active until clicking is done.
+; 03/08/26 - Added a 2-second wait until no mouse or keyboard activity is detected before clicking.
 
 
 ; =================
@@ -34,7 +35,7 @@
 ; Registry key constants
 ; Application information constants
 Global Const $APP_NAME = "PixieClicker"
-Global Const $APP_VERSION = "1.2.0"
+Global Const $APP_VERSION = "1.3.0"
 Global Const $REGISTRY_KEY = "HKEY_CURRENT_USER\Software\" & $APP_NAME
 
 ; Initialize variables
@@ -636,6 +637,39 @@ Func ToggleTimer($iTimerIndex)
     RegWrite($REGISTRY_KEY & "\Timer" & $iTimerIndex, "Active", "REG_DWORD", $aTimerData[$iTimerIndex][3])
 EndFunc
 
+Func WaitForInputIdle($sLabel)
+    Local $aPos1, $aPos2, $bInputDetected
+    While True
+        $bInputDetected = False
+
+        ; Check mouse buttons
+        If _IsPressed("01") Or _IsPressed("02") Then
+            $bInputDetected = True
+        EndIf
+
+        ; Check mouse movement by sampling position 150ms apart
+        $aPos1 = MouseGetPos()
+        Sleep(150)
+        $aPos2 = MouseGetPos()
+        If Not $bInputDetected And ($aPos1[0] <> $aPos2[0] Or $aPos1[1] <> $aPos2[1]) Then
+            $bInputDetected = True
+        EndIf
+
+        If $bInputDetected Then
+            AddStatusMessage("Detected input, waiting to click...", $sLabel)
+            ; Sleep in small chunks so the GUI message loop stays responsive
+            For $i = 1 To 30 ; 30 x 100ms = 3 seconds
+                GUIGetMsg() ; Keep the message loop alive
+                Sleep(100)
+            Next
+            ContinueLoop
+        EndIf
+
+        ; All checks passed - input is idle
+        ExitLoop
+    WEnd
+EndFunc
+
 ; Function to perform a sequence of clicks at specified coordinates
 Func PerformClick($iX, $iY, $sLabel)
     ; Show countdown first
@@ -644,7 +678,7 @@ Func PerformClick($iX, $iY, $sLabel)
     Local $iScreenHeight = $aScreenSize[1]
     
     ; Create a much smaller GUI for the countdown
-    Local $iCountdownWidth = 180
+    Local $iCountdownWidth = 250
     Local $iCountdownHeight = 80
     
     ; Position in bottom right with 20px margin from edges
@@ -711,6 +745,9 @@ Func PerformClick($iX, $iY, $sLabel)
     
     ; Save current active window handle
     Local $hPrevWindow = WinGetHandle("[ACTIVE]")
+
+    ; NEW: wait until mouse and keyboard are idle
+    WaitForInputIdle($sLabel)
     
     ; First click at specified position
     MouseClick("left", $iX, $iY, 1, 0) ; Move and single-click at specified position
