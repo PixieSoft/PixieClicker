@@ -5,20 +5,23 @@
 #AutoIt3Wrapper_UseX64=n
 #AutoIt3Wrapper_Res_Comment=PixieClicker - Automated Mouse Clicker for Roblox and other games.
 #AutoIt3Wrapper_Res_Description=PixieClicker - Automated Mouse Clicker for Roblox and other games.
-#AutoIt3Wrapper_Res_Fileversion=1.3.1.0
+#AutoIt3Wrapper_Res_Fileversion=1.3.2.0
 #AutoIt3Wrapper_Res_FileVersion_AutoIncrement=n
-#AutoIt3Wrapper_Res_ProductVersion=1.3.1.0
+#AutoIt3Wrapper_Res_ProductVersion=1.3.2.0
 #AutoIt3Wrapper_Res_CompanyName=PixieSoft
 #AutoIt3Wrapper_Res_LegalCopyright=Copyright © 2025
 #AutoIt3Wrapper_Run_AU3Check=y
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
+; =================
 ; Change Log
-; 04/02/25 - Initial release.
-; 04/24/25 - Warning boxes no longer steal focus and have colored backgrounds.
-; 08/02/25 - Reduced all delays to 30ms. Red warning box stays active until clicking is done.
-; 03/08/26 - Added a 2-second wait until no mouse or keyboard activity is detected before clicking.
-;            Resized countdown window to fit longer timer names without wrapping.
+; =================
+; 04/02/25 - 1.0.0 Initial release.
+; 04/24/25 - 1.1.0 Warning boxes no longer steal focus and have colored backgrounds.
+; 08/02/25 - 1.2.0 Reduced all delays to 30ms. Red warning box stays active until clicking is done.
+; 03/08/26 - 1.3.2 Added a 2-second wait until no mouse or keyboard activity is detected before clicking.
+;                  Resized countdown window to fit longer timer names without wrapping.
+; =================
 
 ; =================
 ; PixieClicker.au3
@@ -35,7 +38,7 @@
 ; Registry key constants
 ; Application information constants
 Global Const $APP_NAME = "PixieClicker"
-Global Const $APP_VERSION = "1.3.1"
+Global Const $APP_VERSION = "1.3.2"
 Global Const $REGISTRY_KEY = "HKEY_CURRENT_USER\Software\" & $APP_NAME
 
 ; Initialize variables
@@ -657,11 +660,31 @@ Func WaitForInputIdle($sLabel)
 
         If $bInputDetected Then
             AddStatusMessage("Detected input, waiting to click...", $sLabel)
-            ; Sleep in small chunks so the GUI message loop stays responsive
-            For $i = 1 To 30 ; 30 x 100ms = 3 seconds
-                GUIGetMsg() ; Keep the message loop alive
-                Sleep(100)
-            Next
+            ; Sleep in small chunks, but properly dispatch GUI messages
+            ; so toggle/cancel clicks are not swallowed
+            Local $iWaitStart = TimerInit()
+            While TimerDiff($iWaitStart) < 3000
+                Local $nMsg = GUIGetMsg()
+                Switch $nMsg
+                    Case $GUI_EVENT_CLOSE, $idCloseButton
+                        Return $nMsg ; Caller ignores return value, but at least we don't block exit
+                    Case Else
+                        ; Re-dispatch any timer control events so they aren't lost
+                        For $i = 0 To $iTimerCount - 1
+                            If $nMsg = $aTimerControls[$i][4] Then ; Toggle button
+                                ToggleTimer($i)
+                            ElseIf $nMsg = $aTimerControls[$i][2] Then ; Record button
+                                $aTimerRecording[$i] = True
+                                AddStatusMessage("Click anywhere to record position for " & $aTimerData[$i][4] & "...")
+                            ElseIf $nMsg = $aTimerControls[$i][6] Then ; Remove button
+                                RemoveTimer($i)
+                            ElseIf $nMsg = $aTimerControls[$i][7] Then ; Add button
+                                AddTimer($i)
+                            EndIf
+                        Next
+                EndSwitch
+                Sleep(30)
+            WEnd
             ContinueLoop
         EndIf
 
