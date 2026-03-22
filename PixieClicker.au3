@@ -5,9 +5,9 @@
 #AutoIt3Wrapper_UseX64=n
 #AutoIt3Wrapper_Res_Comment=PixieClicker - Automated Mouse Clicker for Roblox and other games.
 #AutoIt3Wrapper_Res_Description=PixieClicker - Automated Mouse Clicker for Roblox and other games.
-#AutoIt3Wrapper_Res_Fileversion=1.3.2.0
+#AutoIt3Wrapper_Res_Fileversion=1.4.0.0
 #AutoIt3Wrapper_Res_FileVersion_AutoIncrement=n
-#AutoIt3Wrapper_Res_ProductVersion=1.3.2.0
+#AutoIt3Wrapper_Res_ProductVersion=1.4.0.0
 #AutoIt3Wrapper_Res_CompanyName=PixieSoft
 #AutoIt3Wrapper_Res_LegalCopyright=Copyright © 2025
 #AutoIt3Wrapper_Run_AU3Check=y
@@ -21,6 +21,8 @@
 ; 08/02/25 - 1.2.0 Reduced all delays to 30ms. Red warning box stays active until clicking is done.
 ; 03/08/26 - 1.3.2 Added a 2-second wait until no mouse or keyboard activity is detected before clicking.
 ;                  Resized countdown window to fit longer timer names without wrapping.
+; 03/21/26 - 1.4.0 Current window and mouse position are saved after the input delay instead of before.
+;                  Status history trimmed to 200 lines maximum.
 ; =================
 
 ; =================
@@ -35,11 +37,11 @@
 #include <Array.au3>
 #include <GuiEdit.au3> ; Required for Edit control scrolling
 
-; Registry key constants
-; Application information constants
+; Application and settings constants
 Global Const $APP_NAME = "PixieClicker"
-Global Const $APP_VERSION = "1.3.2"
+Global Const $APP_VERSION = "1.4.0"
 Global Const $REGISTRY_KEY = "HKEY_CURRENT_USER\Software\" & $APP_NAME
+Global Const $MAX_STATUS_LINES = 100
 
 ; Initialize variables
 Global $aScreenSize = _GetDesktopSize()
@@ -763,21 +765,19 @@ Func PerformClick($iX, $iY, $sLabel)
         AddStatusMessage("Click sequence cancelled by user", $sLabel)
         Return False
     EndIf
-    
-    ; Save current mouse position before clicking
-    Local $aPrevMousePos = MouseGetPos()
-    
-    ; Save current active window handle
-    Local $hPrevWindow = WinGetHandle("[ACTIVE]")
 
     ; NEW: wait until mouse and keyboard are idle
     WaitForInputIdle($sLabel)
+         
+    ; Save current mouse position and active window handle
+    Local $aPrevMousePos = MouseGetPos()
+    Local $hPrevWindow = WinGetHandle("[ACTIVE]")
     
     ; First click at specified position
     MouseClick("left", $iX, $iY, 1, 0) ; Move and single-click at specified position
     AddStatusMessage("First click at X=" & $iX & ", Y=" & $iY, $sLabel)
     
-    ; Wait 100ms (updated from 250ms)
+    ; Wait before next click
     Sleep(30)
     
     ; Second click at the same position
@@ -796,8 +796,8 @@ Func PerformClick($iX, $iY, $sLabel)
     Local $iNewX = $iX + $iOffsetX
     Local $iNewY = $iY + $iOffsetY
     
-    ; Wait 300ms (updated from 1000ms)
-    AddStatusMessage("Waiting 300ms before offset clicks...", $sLabel)
+    ; Wait before next click
+    AddStatusMessage("Waiting before offset clicks...", $sLabel)
     Sleep(30)
     
     ; CRITICAL FIX: Use $iNewX and $iNewY when actually clicking
@@ -816,11 +816,9 @@ Func PerformClick($iX, $iY, $sLabel)
         GUIDelete($hCountdown[$i])
     Next
 
-    ; Restore previous mouse position
-    MouseMove($aPrevMousePos[0], $aPrevMousePos[1], 0)
-    
-    ; Restore previous active window
+    ; Restore previous active window and mouse position
     WinActivate($hPrevWindow)
+    MouseMove($aPrevMousePos[0], $aPrevMousePos[1], 0)
     
     Return True
 EndFunc
@@ -869,12 +867,23 @@ Func AddStatusMessage($sMessage, $sTimerLabel = "")
     ; Get current text
     Local $sCurrentText = GUICtrlRead($idStatusText)
     
-    ; Add new message at the BEGINNING (newest at top)
-    If $sCurrentText <> "" Then
-        $sCurrentText = $sFormattedMessage & @CRLF & $sCurrentText
-    Else
-        $sCurrentText = $sFormattedMessage
+; Add new message at the BEGINNING (newest at top)
+If $sCurrentText <> "" Then
+    $sCurrentText = $sFormattedMessage & @CRLF & $sCurrentText
+    
+    ; Trim history to last 200 lines
+    Local $aLines = StringSplit($sCurrentText, @CRLF, 1)
+    If $aLines[0] > $MAX_STATUS_LINES Then
+        Local $sTrimmed = ""
+        For $i = 1 To 200
+            If $i > 1 Then $sTrimmed &= @CRLF
+            $sTrimmed &= $aLines[$i]
+        Next
+        $sCurrentText = $sTrimmed
     EndIf
+Else
+    $sCurrentText = $sFormattedMessage
+EndIf
     
     ; Update the text box
     GUICtrlSetData($idStatusText, $sCurrentText)
