@@ -5,9 +5,9 @@
 #AutoIt3Wrapper_UseX64=n
 #AutoIt3Wrapper_Res_Comment=PixieClicker - Automated Mouse Clicker for Roblox and other games.
 #AutoIt3Wrapper_Res_Description=PixieClicker - Automated Mouse Clicker for Roblox and other games.
-#AutoIt3Wrapper_Res_Fileversion=1.4.1.0
+#AutoIt3Wrapper_Res_Fileversion=1.4.2.0
 #AutoIt3Wrapper_Res_FileVersion_AutoIncrement=n
-#AutoIt3Wrapper_Res_ProductVersion=1.4.1.0
+#AutoIt3Wrapper_Res_ProductVersion=1.4.2.0
 #AutoIt3Wrapper_Res_CompanyName=PixieSoft
 #AutoIt3Wrapper_Res_LegalCopyright=Copyright © 2025
 #AutoIt3Wrapper_Run_AU3Check=y
@@ -21,8 +21,8 @@
 ; 08/02/25 - 1.2.0 Reduced all delays to 30ms. Red warning box stays active until clicking is done.
 ; 03/08/26 - 1.3.2 Added a 2-second wait until no mouse or keyboard activity is detected before clicking.
 ;                  Resized countdown window to fit longer timer names without wrapping.
-; 03/21/26 - 1.4.1 Current window and mouse position are saved after the input delay instead of before.
-;                  Status history trimmed to 100 lines maximum. Added 3 pixel movement threshold.
+; 03/21/26 - 1.4.2 Current window and mouse position are saved after the input delay instead of before.
+;                  Status history trimmed to a maximum count. Added 3 pixel movement threshold.
 ; =================
 
 ; =================
@@ -39,7 +39,7 @@
 
 ; Application and settings constants
 Global Const $APP_NAME = "PixieClicker"
-Global Const $APP_VERSION = "1.4.1"
+Global Const $APP_VERSION = "1.4.2"
 Global Const $REGISTRY_KEY = "HKEY_CURRENT_USER\Software\" & $APP_NAME
 Global Const $MAX_STATUS_LINES = 100
 
@@ -874,7 +874,7 @@ If $sCurrentText <> "" Then
     Local $aLines = StringSplit($sCurrentText, @CRLF, 1)
     If $aLines[0] > $MAX_STATUS_LINES Then
         Local $sTrimmed = ""
-        For $i = 1 To 200
+        For $i = 1 To $MAX_STATUS_LINES
             If $i > 1 Then $sTrimmed &= @CRLF
             $sTrimmed &= $aLines[$i]
         Next
