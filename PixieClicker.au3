@@ -5,9 +5,9 @@
 #AutoIt3Wrapper_UseX64=n
 #AutoIt3Wrapper_Res_Comment=PixieClicker - Automated Mouse Clicker for Roblox and other games.
 #AutoIt3Wrapper_Res_Description=PixieClicker - Automated Mouse Clicker for Roblox and other games.
-#AutoIt3Wrapper_Res_Fileversion=1.4.0.0
+#AutoIt3Wrapper_Res_Fileversion=1.4.1.0
 #AutoIt3Wrapper_Res_FileVersion_AutoIncrement=n
-#AutoIt3Wrapper_Res_ProductVersion=1.4.0.0
+#AutoIt3Wrapper_Res_ProductVersion=1.4.1.0
 #AutoIt3Wrapper_Res_CompanyName=PixieSoft
 #AutoIt3Wrapper_Res_LegalCopyright=Copyright © 2025
 #AutoIt3Wrapper_Run_AU3Check=y
@@ -21,8 +21,8 @@
 ; 08/02/25 - 1.2.0 Reduced all delays to 30ms. Red warning box stays active until clicking is done.
 ; 03/08/26 - 1.3.2 Added a 2-second wait until no mouse or keyboard activity is detected before clicking.
 ;                  Resized countdown window to fit longer timer names without wrapping.
-; 03/21/26 - 1.4.0 Current window and mouse position are saved after the input delay instead of before.
-;                  Status history trimmed to 200 lines maximum.
+; 03/21/26 - 1.4.1 Current window and mouse position are saved after the input delay instead of before.
+;                  Status history trimmed to 100 lines maximum. Added 3 pixel movement threshold.
 ; =================
 
 ; =================
@@ -39,7 +39,7 @@
 
 ; Application and settings constants
 Global Const $APP_NAME = "PixieClicker"
-Global Const $APP_VERSION = "1.4.0"
+Global Const $APP_VERSION = "1.4.1"
 Global Const $REGISTRY_KEY = "HKEY_CURRENT_USER\Software\" & $APP_NAME
 Global Const $MAX_STATUS_LINES = 100
 
@@ -653,34 +653,33 @@ Func WaitForInputIdle($sLabel)
         EndIf
 
         ; Check mouse movement by sampling position 150ms apart
+        ; Require 3+ pixels of total movement to filter out optical sensor jitter
         $aPos1 = MouseGetPos()
         Sleep(150)
         $aPos2 = MouseGetPos()
-        If Not $bInputDetected And ($aPos1[0] <> $aPos2[0] Or $aPos1[1] <> $aPos2[1]) Then
+        Local $iMoveDelta = Abs($aPos2[0] - $aPos1[0]) + Abs($aPos2[1] - $aPos1[1])
+        If Not $bInputDetected And $iMoveDelta > 3 Then
             $bInputDetected = True
         EndIf
 
         If $bInputDetected Then
             AddStatusMessage("Detected input, waiting to click...", $sLabel)
-            ; Sleep in small chunks, but properly dispatch GUI messages
-            ; so toggle/cancel clicks are not swallowed
             Local $iWaitStart = TimerInit()
             While TimerDiff($iWaitStart) < 3000
                 Local $nMsg = GUIGetMsg()
                 Switch $nMsg
                     Case $GUI_EVENT_CLOSE, $idCloseButton
-                        Return $nMsg ; Caller ignores return value, but at least we don't block exit
+                        Return $nMsg
                     Case Else
-                        ; Re-dispatch any timer control events so they aren't lost
                         For $i = 0 To $iTimerCount - 1
-                            If $nMsg = $aTimerControls[$i][4] Then ; Toggle button
+                            If $nMsg = $aTimerControls[$i][4] Then
                                 ToggleTimer($i)
-                            ElseIf $nMsg = $aTimerControls[$i][2] Then ; Record button
+                            ElseIf $nMsg = $aTimerControls[$i][2] Then
                                 $aTimerRecording[$i] = True
                                 AddStatusMessage("Click anywhere to record position for " & $aTimerData[$i][4] & "...")
-                            ElseIf $nMsg = $aTimerControls[$i][6] Then ; Remove button
+                            ElseIf $nMsg = $aTimerControls[$i][6] Then
                                 RemoveTimer($i)
-                            ElseIf $nMsg = $aTimerControls[$i][7] Then ; Add button
+                            ElseIf $nMsg = $aTimerControls[$i][7] Then
                                 AddTimer($i)
                             EndIf
                         Next
